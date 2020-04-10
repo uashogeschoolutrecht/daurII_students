@@ -1,0 +1,76 @@
+id,name
+GO:0000003,reproduction
+GO:0000237,leptotene
+GO:0000238,zygotene
+GO:0000239,pachytene
+GO:0000746,conjugation
+GO:0001896,autolysis
+GO:0002118,aggressive behavior
+GO:0002432,granuloma formation
+GO:0002524,hypersensitivity
+GO:0003094,glomerular filtration
+GO:0006508,proteolysis
+GO:0006810,transport
+GO:0006887,exocytosis
+GO:0006909,phagocytosis
+GO:0006950,response to stress
+GO:0006954,inflammatory response
+GO:0006955,immune response
+GO:0007283,spermatogenesis
+GO:0007320,insemination
+GO:0007530,sex determination
+GO:0007552,metamorphosis
+GO:0007567,parturition
+GO:0007568,aging
+GO:0007586,digestion
+GO:0007588,excretion
+GO:0007595,lactation
+GO:0007596,blood coagulation
+GO:0007599,hemostasis
+GO:0007610,behavior
+GO:0007612,learning
+GO:0007613,memory
+GO:0007617,mating behavior
+GO:0007618,mating
+GO:0007620,copulation
+GO:0008219,cell death
+GO:0009405,pathogenesis
+GO:0009877,nodulation
+GO:0014889,muscle atrophy
+GO:0018158,protein oxidation
+GO:0019835,cytolysis
+GO:0019915,lipid storage
+GO:0021554,optic nerve development
+GO:0030097,hemopoiesis
+GO:0030421,defecation
+GO:0030432,peristalsis
+GO:0030728,ovulation
+GO:0031099,regeneration
+GO:0031424,keratinization
+GO:0035314,scab formation
+GO:0035483,gastric emptying
+GO:0035640,exploration behavior
+GO:0036268,swimming
+GO:0040007,growth
+GO:0040011,locomotion
+GO:0042639,telogen
+GO:0043473,pigmentation
+GO:0043476,pigment accumulation
+GO:0044849,estrous cycle
+GO:0046903,secretion
+GO:0046959,habituation
+GO:0050817,coagulation
+GO:0051179,localization
+GO:0060004,reflex
+GO:0060013,righting reflex
+GO:0060207,diestrus
+GO:0060208,proestrus
+GO:0060209,estrus
+GO:0060210,metestrus
+GO:0070268,cornification
+GO:0070487,monocyte aggregation
+GO:0097205,renal filtration
+GO:0097722,sperm motility
+GO:0098754,detoxification
+GO:0150103,reactive gliosis
+GO:1990399,epithelium regeneration

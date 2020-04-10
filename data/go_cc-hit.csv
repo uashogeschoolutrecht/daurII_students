@@ -1,0 +1,24 @@
+id,name
+GO:0000785,chromatin
+GO:0005604,basement membrane
+GO:0005622,intracellular
+GO:0005623,cell
+GO:0005634,nucleus
+GO:0005737,cytoplasm
+GO:0005773,vacuole
+GO:0005777,peroxisome
+GO:0005790,smooth endoplasmic reticulum
+GO:0005811,lipid droplet
+GO:0005874,microtubule
+GO:0016020,membrane
+GO:0030424,axon
+GO:0031040,micronucleus
+GO:0031982,vesicle
+GO:0042383,sarcolemma
+GO:0042588,zymogen granule
+GO:0042603,capsule
+GO:0043209,myelin sheath
+GO:0045180,basal cortex
+GO:0061827,sperm head
+GO:0090651,apical cytoplasm
+GO:0097412,hyaline inclusion
