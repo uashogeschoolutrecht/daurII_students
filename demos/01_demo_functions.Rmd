@@ -1,0 +1,28 @@
+---
+title: "Demo functions"
+author: "Marc A.T. Teunis"
+date: "4/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Packages
+
+## Data
+
+## Normalize (scale)
+Normalize each column for min max according $\frac{Yi - Y.min}{Ymax - Ymin}$
+value between 0 and 1
+See for a [free online LaTeX editor:](https://www.codecogs.com/latex/eqneditor.php
+
+## what happens if vector contains an NA?
+
+## write function that handles this
+
+## use dot dot dot (ellipsis)
+
+##use x = NULL to force user to address argument
+
