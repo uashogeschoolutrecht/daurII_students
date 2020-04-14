@@ -10,19 +10,83 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Packages
+```{r}
+library(tidyverse)
+```
 
 ## Data
+```{r}
+data <- tibble(
+  a = rnorm(100, 1, 0.5),
+  b = rnorm(100, 2, 0.2),
+  c = rnorm(100, 3, 0.7)
+)
+
+data
+
+```
+
+## Opdracht
+Normaliseer iedere kolom:
+
+$\frac{Yi - min(Y)}{max(Y) - min(Y)}$
+
+```{r, eval=FALSE}
+data$a_rescaled <- (data$a - min(data$a)) / (max(data$a) - min(data$a))
+data
+data$brescaled <- (data$b - min(data$b)) / (max(data$b) - min(data$b))
+data$c_rescaled <- (data$c - min(data$c)) / (max(data$c) - min(data$c))
+
+data
+
+
+```
+
+```{r}
+## vector meestal aangeven met een x
+## dummie 
+x = c(1:10)
+
+rescale <- function(x){
+  
+    min_value <- min(x, na.rm = TRUE)
+    max_value <- max(x, na.rm = TRUE)
+    range_value <- max_value - min_value
+    normalized_x <- (x - min_value) / (max_value - min_value)
+  return(normalized_x)
+  
+}
+
+
+# data$a_rescaled <- rescale(x = data$a)
+# data$b_rescaled <- rescale(x = data$b)
+# data$c_rescaled <- rescale(x = data$c)
+
+data_rescaled <- map_df(
+  .x = data,
+  .f = rescale
+)
+
+data_rescaled
+```
+
+
+
+
+
 
 ## Normalize (scale)
 Normalize each column for min max according $\frac{Yi - Y.min}{Ymax - Ymin}$
 value between 0 and 1
 See for a [free online LaTeX editor:](https://www.codecogs.com/latex/eqneditor.php
 
-## what happens if vector contains an NA?
+## What happens if vector contains an NA?
 
-## write function that handles this
+
+## Write a function that nromalizes a single column
 
 ## use dot dot dot (ellipsis)
 
-##use x = NULL to force user to address argument
+## Use x = NULL to force user to address argument
 
+## Show iteration with `map()` from 
