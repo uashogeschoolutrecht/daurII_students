@@ -26,8 +26,13 @@ data
 
 ```
 
+## Normalize (scale)
+Normalize each column for min max according $\frac{Yi - Y.min}{Ymax - Ymin}$
+value between 0 and 1
+See for a [free online LaTeX editor:](https://www.codecogs.com/latex/eqneditor.php
+
 ## Opdracht
-Normaliseer iedere kolom:
+Normaliseer iedere kolom in dataframe `data`:
 
 $\frac{Yi - min(Y)}{max(Y) - min(Y)}$
 
@@ -42,26 +47,32 @@ data
 
 ```
 
+## A function that reduces duplication in the code
 ```{r}
-## vector meestal aangeven met een x
-## dummie 
+## vector in R as a function argument is usually indicated as x
+
+## dummy argument to test the body of the function
 x = c(1:10)
 
 rescale <- function(x){
   
-    min_value <- min(x, na.rm = TRUE)
-    max_value <- max(x, na.rm = TRUE)
+    min_value <- min(x)
+    max_value <- max(x)
     range_value <- max_value - min_value
     normalized_x <- (x - min_value) / (max_value - min_value)
   return(normalized_x)
   
 }
 
-
+## function tests:
 # data$a_rescaled <- rescale(x = data$a)
 # data$b_rescaled <- rescale(x = data$b)
 # data$c_rescaled <- rescale(x = data$c)
 
+```
+
+## Iterate function over `data` columns
+```{r}
 data_rescaled <- map_df(
   .x = data,
   .f = rescale
@@ -70,23 +81,111 @@ data_rescaled <- map_df(
 data_rescaled
 ```
 
-
-
-
-
-
-## Normalize (scale)
-Normalize each column for min max according $\frac{Yi - Y.min}{Ymax - Ymin}$
-value between 0 and 1
-See for a [free online LaTeX editor:](https://www.codecogs.com/latex/eqneditor.php
-
 ## What happens if vector contains an NA?
+```{r}
+## test function with vector containing an NA
+with_na <- c(1:9, NA)
+rescale(with_na)
+
+## vector meestal aangeven met een x
+## dummie 
+x = c(1:10)
+
+## fix for missing values
+rescale <- function(x){
+  
+  min_value <- min(x)
+  max_value <- max(x, na.rm = TRUE)
+  range_value <- max_value - min_value
+  normalized_x <- (x - min_value) / (max_value - min_value)
+  
+  return(normalized_x)
+  
+}
 
 
-## Write a function that nromalizes a single column
+```
 
-## use dot dot dot (ellipsis)
+## Use `dot dot dot` (ellipsis) argument
+```{r}
+## test function with vector containing an NA
+with_na <- c(1:9, NA)
+rescale(with_na)
+
+## vector meestal aangeven met een x
+## dummie 
+x = c(1:10, NA)
+
+## fix for missing values
+rescale <- function(x, ...){
+  
+  min_value <- min(x, ...)
+  max_value <- max(x, ...)
+  range_value <- max_value - min_value
+  normalized_x <- (x - min_value) / (max_value - min_value)
+  
+  return(normalized_x)
+  
+}
+
+rescale(x = x, na.rm = TRUE)
+```
+
 
 ## Use x = NULL to force user to address argument
+```{r}
+## test function with vector containing an NA
+with_na <- c(1:9, NA)
+rescale(with_na)
 
-## Show iteration with `map()` from 
+## vector meestal aangeven met een x
+## dummie 
+x = c(1:10)
+
+## fix for missing values
+rescale <- function(x = NULL, ...){
+  
+  min_value <- min(x, ...)
+  max_value <- max(x, ...)
+  range_value <- max_value - min_value
+  normalized_x <- (x - min_value) / (max_value - min_value)
+  
+  return(normalized_x)
+  
+}
+
+rescale(x = x, na.rm = TRUE)
+```
+
+## Function documentation using `roxygen2`
+In order to standardize documentation for functions in R we can use roxygen coments. These are special comments and operators (`@operator`) to build the documentation. Make it a habit to write this documentation early in the process of developing a function and come back to it if things have changed.
+```{r}
+#' @title Normalize a numeric vector. 
+#' @param x A numeric vector of type double or integer, or coercible to one.
+#' @param ... Additional arguments passed on to min() and max().
+#' @return Normalized vector according the formula 
+#' \eqn{\frac{Yi - min(Y)}{max(Y) - min(Y)}} where Yi is the i-th element in #' the vector x. The dot dot dot (elippsis) argument can be set to handle 
+#' missing values. Set na.rm = TRUE in the function call. Default, missing 
+#' values are not handled.
+#' @details The process of nromalization usually reduces the scale on which the data is represented. In this case a often used function is used that reduces the scale of the data to a respresentation between 0 and 1, in which the maximum value, the minumum vale are used as parameters. Other way of normalization use e.g. the standard deviation, the mean or the variance as parameters. 
+#' @example 
+#' x <- c(1:10)
+#' rescale(x)
+#' z <- c(1:9, NA)
+#' rescale(z, na.rm = TRUE)
+#' @export
+
+rescale <- function(x = NULL, ...){
+  
+  min_value <- min(x, ...)
+  max_value <- max(x, ...)
+  range_value <- max_value - min_value
+  normalized_x <- (x - min_value) / (max_value - min_value)
+  
+  return(normalized_x)
+  
+}
+
+
+```
+
