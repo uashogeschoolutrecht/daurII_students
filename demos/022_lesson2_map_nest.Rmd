@@ -31,13 +31,14 @@ root <- find_root_file(criterion = is_rstudio_project)
 
 ```
 
-## In the previous lessons you have learnt how to write functions and use function to iterate over R-objects to perform repetitive actions. In this part of lesson 2 we will build upon this concept. 
+## Prequisites
+In the previous lessons you have learnt how to write functions and use function to iterate over R-objects to perform repetitive actions. In this part of lesson 2 we will build upon this concept. 
 
 ## Contents
 
- 1. Recap: Dataframes, Lists and Iterations
- 2. "`split()` --> `map()` --> iterate" workflow
- 3. Using list-colums (in a dataframe) to apply the "split --> map --> iterate" workflow
+ 1. **Recap: Dataframes, Lists and Iterations**
+ 2. **"`nest()` --> `map()` --> iterate" workflow**
+ 3. **Using list-colums (in a dataframe) to apply the "`nest()` --> `map()` --> iterate" workflow**
  4. Implementing list-columns to create models and graphs
 
 ## Packages
@@ -64,11 +65,6 @@ table
 
 ## Checking characteristics of `table`
 ```{r}
-is.vector(table)
-is.vector(table$a)
-is.atomic(table)
-is.atomic(table$c)
-is.recursive(table)
 class(table)
 typeof(table)
 ## So dataframes are a special kind of lists?!? 
@@ -85,6 +81,12 @@ table <- tribble(
 table
 ```
 
+## A simple iteration
+```{r}
+
+```
+
+
 ## Iterate over a dataframe
 ```{r}
 map(table, class)
@@ -100,13 +102,9 @@ map(table$e, nchar)
 ## Data origin
 
 Whooping cough outbreaks from The World Health Organization
-
 http://data.euro.who.int/cisid/?TabID=463987
-
 See for variable and data collection also: 
-
 http://ecdc.europa.eu/sites/portal/files/documents/Pertussis%20AER.pdf
-
 for more details see file: "load_data.R"
 
 ## Load the tidy version of the dataset
