@@ -1,0 +1,36 @@
+---
+title: "Demo Lesson 2"
+author: "Marc A.T. Teunis"
+date: "4/19/2020"
+output: 
+  ioslides_presentation:
+    widescreen: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Today's agenda
+
+ - Setting up your project environment in RStudio
+ - Connect to the github repo: Lesson 0
+ - Demo Lesson 2
+ 
+## Setup RStudio project and Connect to Github
+
+ - **ALWAYS** work from an RStudio project
+ - Check if you are in the right project!
+ - Clone the content once from 
+ https://github.com/uashogeschoolutrecht/daurII_students
+ - When working in the project do: `commit` -> `pull`
+ - New materials will be added during the course so pull regularly 
+
+## Lesson 2
+
+ - Iterate with `map-family` functions
+ - Iterate over one R object
+ - **Iterate using multiple inputs**
+ - **List columns**
+ 
+ 

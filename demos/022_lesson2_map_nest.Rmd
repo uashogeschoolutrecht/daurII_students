@@ -1,0 +1,389 @@
+---
+title: "How to keep it togetheR"
+author: "Marc A.T. Teunis, Ph.D."
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    highlight: pygments
+    widescreen: yes
+subtitle: List-columns in a dataframe
+resource_files:
+- data/CISID_pertussis_10082018.csv
+- R/do_tidy_pertussis.R
+- code/load_data.R
+- resources.Rmd
+- README.md
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      error = FALSE, 
+                      fig.width = 4,
+                      fig.height = 4)
+```
+
+```{r, root, include=FALSE, eval=FALSE}
+require("rprojroot") || utils::install.packages("rprojroot")
+library(rprojroot)
+root <- find_root_file(criterion = is_rstudio_project)
+
+```
+
+## In the previous lessons you have learnt how to write functions and use function to iterate over R-objects to perform repetitive actions. In this part of lesson 2 we will build upon this concept. 
+
+## Contents
+
+ 1. Recap: Dataframes, Lists and Iterations
+ 2. "`split()` --> `map()` --> iterate" workflow
+ 3. Using list-colums (in a dataframe) to apply the "split --> map --> iterate" workflow
+ 4. Implementing list-columns to create models and graphs
+
+## Packages
+The packages used in this tutorial
+```{r, packages}
+library(tidyverse)
+library(modelr)
+library(lubridate)
+library(broom)
+library(purrr)
+library(repurrrsive)
+```
+
+## Dataframes and Lists are recursive vectors
+```{r, recursive_vectors}
+table <- tribble(
+  ~ a, ~b, ~c, ~d, 
+  "x", 1, TRUE, 1.45, 
+  "y", 2, FALSE, 3.88,
+  "z", 3, TRUE, 33.5
+  ) 
+table
+```
+
+## Checking characteristics of `table`
+```{r}
+is.vector(table)
+is.vector(table$a)
+is.atomic(table)
+is.atomic(table$c)
+is.recursive(table)
+class(table)
+typeof(table)
+## So dataframes are a special kind of lists?!? 
+```
+
+## Column containing a list (in a dataframe)
+```{r}
+table <- tribble(
+  ~ a,      ~b,      ~c,       ~d,     ~e, 
+  "x",      1,       TRUE,     1.45,   numbers = 1:10,
+  "y",      2,       FALSE,    3.88,   lgl = c(TRUE, FALSE),
+  "z",      3,       TRUE,     33.5,   city = "Utrecht"   
+  ) 
+table
+```
+
+## Iterate over a dataframe
+```{r}
+map(table, class)
+```
+
+## Iterate over a list
+```{r}
+map(table$e, nchar)
+```
+
+# Case data
+
+## Data origin
+
+Whooping cough outbreaks from The World Health Organization
+
+http://data.euro.who.int/cisid/?TabID=463987
+
+See for variable and data collection also: 
+
+http://ecdc.europa.eu/sites/portal/files/documents/Pertussis%20AER.pdf
+
+for more details see file: "load_data.R"
+
+## Load the tidy version of the dataset
+The code for cleaning and tidying the data is in the file "./load_data.R"
+```{r, read_data}
+source(file = here::here(
+  "code",
+  "load_data.R"))
+  
+```
+
+## Inspect data
+```{r, inspect_data}
+head(pertussis_data_tidy, n = 2)
+names(pertussis_data_tidy)
+```
+
+## For which years is there data recorded?
+```{r, echo=FALSE, fig.width=4, fig.height=4}
+pertussis_data_tidy %>%
+  ggplot(aes(x = year, y = annual_pertussis_cases)) +
+  geom_point(aes(position = "jitter" ))
+```
+
+## Log10 cases by year, `colour = country`
+```{r, echo=FALSE, fig.width=4, fig.height=4}
+pertussis_data_tidy %>%
+  na.omit() %>%
+  group_by(country) %>%
+  ggplot(aes(x = year,
+             y = log10(annual_pertussis_cases))) +
+  geom_line(aes(group = country, colour = country))  +
+  theme_bw() +
+  theme(legend.position="none") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+This is a messy graph indeed!!
+
+## Only the Netherlands
+```{r, echo=FALSE, fig.width=4, fig.height=4}
+## only Netherlands data
+netherlands_data <- pertussis_data_tidy %>%
+  dplyr::filter(country == "Netherlands") %>%
+  na.omit() ## for sake of simplicity we remove the years that are missing
+
+netherlands_data %>%
+  ggplot(aes(x = year,
+             y = annual_pertussis_cases)) + 
+  geom_line() +
+  geom_point(colour = "red") +
+  ggtitle("The Netherlands; Whooping Cough cases")
+```
+
+## Plot linear model for NL
+```{r, echo=FALSE, fig.width=4, fig.height=4}
+netherlands_model <- lm(
+  annual_pertussis_cases ~ year, 
+  data = netherlands_data %>%
+    na.omit()
+)
+## plot model for NL
+
+netherlands_data %>%
+  na.omit() %>%
+  add_predictions(netherlands_model) %>%
+  ggplot(aes(x = year, 
+             y = pred)) +
+  geom_line() +
+  ggtitle("Linear trend") +
+  geom_point(
+    data = netherlands_data,
+    aes(x = year, 
+    y = annual_pertussis_cases),
+    colour = "red") +
+  geom_line(
+    data = netherlands_data %>% na.omit, ## note the pipe to remove NA
+    aes(x = year, 
+        y = annual_pertussis_cases),
+    colour = "red",
+    linetype = "dashed"
+)
+
+```
+
+## How can we apply this to `every` country 
+without doing the above `r pertussis_data_tidy$country %>% as_factor() %>% levels() %>% length()` times.
+
+## Split the data by country and apply the model or graphing code to each subset
+
+ - In fact, data for each country is a subset of the full dataset
+ - We can subset the original dataframe into seperate dataframes for each country 
+
+## Using list-columns to keep track of your results and models
+```{r}
+nested_pertussis <- pertussis_data_tidy %>%
+  na.omit() %>%
+  dplyr::select(country, year, annual_pertussis_cases) %>%
+  group_by(country) %>%
+    nest() 
+
+head(nested_pertussis, 2) ## you see the grouping by country
+head(nested_pertussis$data[[1]], 2) ## you get the individual country df
+```
+
+## Label (name) the idividual elements of the list column 
+```{r, eval=FALSE} 
+names(nested_pertussis$data) <- nested_pertussis$country 
+```
+ 
+## Linear model for each country
+First we write a function that creates the linear model for  one country
+```{r}
+country_model_lm <- function(df){
+  model <- lm(
+    annual_pertussis_cases ~ year, 
+    data = df)
+  return(model)
+}
+```
+
+## Iterate the model function over nested `$data` with `purrr::map()`
+```{r}
+models <- map(
+  nested_pertussis$data, country_model_lm
+  )
+head(models, 2)
+```
+
+## Extracting information from models the tidy way
+```{r}
+# models[[1]] %>% summary 
+models[[1]] %>% broom::glance()
+models[[1]] %>% broom::glance() %>%
+  pluck("adj.r.squared")
+```
+
+## Keep it togetheR
+ - We have the models now
+ - Better to store them together with the data
+ - By using `dplyr::mutate()` 
+ 
+When working with nested dataframes we can easily keep operations that we want to execute on the individual rows in the nested dataframes. Each row in a nested datframe contains the grouped data. In the example on the previous page we saw that each row in the nested gapminder datset contains the data for one country in the orignal data. If we want to operate on the data per country we can keep these operation inside the nested dataframe like this:
+
+| mean  | sd        | random_normals  |
+|-------|-----------|-----------------|
+| -5    | 0.5       | rnorm(1000, -5, 0.2)  |
+| 0     | 1         | rnorm(1000, 0, 1)     |
+| 10    | 4         | rnorm(1000, 10, 4)    |
+
+Let's examine the example in the table above.Imagine we want to create three random normal distributions (of 1000 observations) with means -5, 0 and 10 and sds 0.5, 1 and 4 and visualize each distribution seperately with a density line-plot, using ggplot. We could do:
+
+```{r}
+n <- 1000
+distrubtion1 <- rnorm(n = n,-5, 0.5)
+distribution2 <- rnorm(n = n, 0, 1)
+distribution3 <- rnorm(n = n, 10, 4)
+```
+
+We can put this all in a dataframe, gather (or pivot_longer). After this we can visualize each distribution in ggplot, either by displaying three lines in a plot or using panels. But imagine we want to do other operations on these three distributions, like perform moddeling or use them for simulations. Keeping things together and linked to the three individual collections of datapoints readilty becomes complicated. You will probably end up with many object in your Global Environment. This is also problematic because you have to come up for a name of all those object. Here we show you a better way, that enables you to do all the things on these object (or any other collections of data-objects) with just one data-object in your global environment. This way all operation can be easily traced back to the original data.Let's look at how we can do this.First we create a dataframe containing the desired means and sds of our three intended distributions of random normals:
+
+```{r}
+data_normals <- tibble(
+  means = c(-5, 0, 10),
+  sds = c(0.5, 1, 4)
+) 
+``` 
+
+## Add a new list-column containing the random normals based on the other two columns
+With the `map2()` function we can iterate over two arguments simultaneously and get a out of the loop. Because we are doing this inside a dataframe column, we get a so-called `list-column`, thus a list inside a datarame column. The `rnorm()` function need two arguments, a mean and an sd. We got those both in a column. We can create a new column holding the random normals using `muatate()` from `{dplyr}`. When we explicitly name the arguments `.x`, `.y` and `.f` in the call to map2 we can more easily read the code. Because we want to have 1000 observations for all three collections of random normals, we can set the argument n as a global paramter in the loop.  
+
+```{r}
+data_normals <- data_normals %>%
+  mutate(random_normals = map2(
+    .x = means,
+    .y = sds,
+    .f = rnorm,
+    n = 1000
+  ), ## turns the list of victors into a list of dataframes:
+  random_normals = map(random_normals, enframe)
+  ) 
+
+```
+
+Lets examine this dataframe and the newly added column called `random_normals`
+```{r}
+data_normals
+```
+We see three columns:
+
+ 1. Column `means`, the means that were used to create the random normals in column 3
+ 1. The column `sds`, the standard deviations used to create the random normals in column 3
+ 1. the collection of random normals, each in its own tibble in column 3: a list-column containing three tibbles, to be precise. 
+
+The idea of putting a list inside a dataframe sounds crazy, but it is extremely powerfull and very handy because things that belong together stay together. And more so, in a convenient data-object format 'the dataframe' that we mostly aim to get when we do data-analysis. All the tools that you have learned so far, can be applied on this dataframe containing a list columns. Especially, warngling with the dplyr verbs gives you strong abillities to do whatever you want. 
+
+## Adding a list of graphs as a list columns
+We can now expand on the idea to perform data-analysis operations on columns in a dataframe, generating new columns, for example to hold graphs. For this to work we will need to write our own plot-generating function first. 
+
+When writing function consider to write the function for the smallest piece of data-input (usually a single element of a vector, a row or column of a dataframe or in this case a single list-element). The iteration will work best then.
+
+Create a function that plot a density line-plot for only one dataframe as input
+```{r}
+## dummy
+df = data_normals$random_normals[[1]]
+
+plot_density_line <- function(df, ...){
+  
+  plot <- df %>%
+    ggplot(aes(x = value)) +
+             geom_density()
+  
+  return(plot)  
+  
+}
+
+```
+
+We then iterate this function over the list-column containing the three dataframes with our random normals
+```{r}
+data_normals <- data_normals %>%
+  mutate(
+    density_lines = map(
+      random_normals, plot_density_line)
+    )
+
+## we provide names to the list of graphs
+names(data_normals$density_lines) <- paste(data_normals$means,
+                                           data_normals$sds)
+names(data_normals$density_lines)
+## we can pull the grap from the dataframe by its name
+pluck(data_normals$density_lines, "-5 0.5")
+
+## all graphs
+data_normals$density_lines
+```
+
+
+# Back to the pertussis case
+
+## Create an additional list-column on the basis of an existing one
+```{r}
+nested_pertussis <- nested_pertussis %>%
+  mutate(models_lm = map(data, country_model_lm))
+# View(nested_pertussis)
+head(nested_pertussis, 2)
+```
+
+## Add model summaries as a list column
+```{r}
+nested_pertussis <- nested_pertussis %>%
+  mutate(models_lm_summary = map(models_lm, summary))
+# View(nested_pertussis)
+```
+
+## Extracting information
+```{r}
+nested_pertussis <- nested_pertussis %>%
+  mutate(params_lm =  map(models_lm, broom::glance)) %>%
+  mutate(p_value = map(params_lm, pluck, "p.value"))
+
+nested_pertussis$params_lm[[1]]
+nested_pertussis$p_value[[1]] %>% round(6)
+
+```
+
+## `map2()`
+
+ - What type of arguments does the function `map2()` take?
+ - How would you find more information?
+
+## Learn more?
+
+'Managing many models with R' by Hadley Wickham - Lecture
+https://www.youtube.com/watch?v=rz3_FDVt9eg
+
+'R for Data Science' by Garret Grolemund & Hadley Wickham
+https://r4ds.had.co.nz/
+Especially chapters:
+21 - https://r4ds.had.co.nz/iteration.html
+25 - https://r4ds.had.co.nz/many-models.html

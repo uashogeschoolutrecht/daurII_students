@@ -48,7 +48,7 @@ library(broom)
 
 ## ---- read_data----------------------------------------------------------
 pertussis_data <- read_csv(
-  file = file.path("data", 
+  file = here::here("data", 
                    "CISID_pertussis_10082018.csv"),
   comment = "#", 
   n_max = 53, 
@@ -60,7 +60,7 @@ head(pertussis_data, n = 2)
 names(pertussis_data)
 
 ## ------------------------------------------------------------------------
-source(file = file.path("R",
+source(file = here::here("R",
                         "do_tidy_pertussis.R"))
 
 
