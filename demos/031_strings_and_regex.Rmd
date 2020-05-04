@@ -1,0 +1,611 @@
+---
+title: "Strings and regular expressions"
+author: "Marc A.T. Teunis"
+date: "`r Sys.Date()`"
+always_allow_html: true
+output: 
+  beamer_presentation:
+    theme: "AnnArbor"
+    colortheme: "dolphin"
+    fonttheme: "structurebold"
+resource_files:
+- images/stringr.png
+- images/cat_sleeping_on_keyboard.jpg
+- images/yoda_the_last_jedi.jpg
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                    #  error = FALSE,
+                    #  warning = FALSE,
+                    #  message = FALSE,
+                      fig.width = 5, 
+                      fig.height = 3)
+```
+
+## Packages
+```{r, tidyverse}
+library(tidyverse)
+library(stringr)
+```
+
+## Strings and Regular Expressions
+```{r, echo=FALSE, fig.align='right'}
+knitr::include_graphics(path = here::here("images", "stringr.png"),
+                        dpi = 80)
+```
+
+## Learning aim {.build}
+This lesson introduces you to character (or also called string-) manipulation in R. 
+
+ * You'll learn the basics of how strings work and how to create them by hand
+ * The focus of this chapter will be on regular expressions, or regex for short. 
+ * Regular expressions are useful because strings usually contain unstructured or semi-structured data
+ * regex are a concise language for describing patterns in strings. 
+ * You will learn how to apply regexps to extract strings from textual or biological string data.
+ * In bioinformatics we often work with large strings: Think about the DNA bases in the human genome. It contains around 6.4 Billion (_6.4*10E9_) base pairs 
+
+## _The greatest teacher, failure is!_
+```{r, dpi = 600, echo=FALSE}
+knitr::include_graphics(
+  here::here("images", "yoda_the_last_jedi.jpg")
+)
+```
+
+_Yoda, The Last Jedi, 2017_
+
+## Go to Rmd file --> "/demo/031_strings_and_regex.Rmd"
+
+## Strings and characters
+The terminology can be confusing, therefore a short recap
+```{r}
+string <- str_c("May the Force be with you!")
+character_vector <- str_c("If you use a for-loop", "You are not using the R Force")
+also_a_string <- str_c("Heeded my words not, did you? 'Pass on what you have learned.' Strength, mastery, hmm... but weakness, folly, failure, also. Yes, failure, most of all. The greatest teacher, failure is.")
+empty_character <- character()
+
+collection <- list(
+  string, 
+  character_vector,
+  also_a_string,
+  empty_character
+)
+
+map(collection, str_length)
+map(collection, length)
+map(collection, typeof)
+
+```
+So a string is always a character vector in R, with length 0 or more
+
+## Regular $express(i)o(n)s^
+When you first look at a regexp, you'll think a cat walked across your keyboard.
+
+```{r, echo=FALSE}
+path_to_cat <- here::here("images", "cat_sleeping_on_keyboard.jpg")
+knitr::include_graphics(path = path_to_cat, dpi = 100)
+```
+
+## Complex email regex in R
+```{r}
+regex_email <- str_c("[[:alnum:]\\.-_]+@[[:alnum:].-]+")
+my_message <- str_c("For more information sent an email to
+marc.teunis@hu.nl or
+maddocent@gmail.com")
+str_view_all(my_message, regex_email)
+```
+
+## To extract the email addresses:
+```{r}
+emails <- str_match_all(my_message, regex_email)
+## str_match and str_match_all, return a matrix
+as_tibble(unlist(emails))
+```
+
+## Prerequisites
+This lesson will focus on the `{stringr}` package for string manipulation. stringr is not part of the core tidyverse because you don't always have textual data, so we need to load it explicitly.
+```{r packages, message = FALSE, eval=FALSE}
+library(stringr)
+```
+
+## String basics
+ * Create strings with either single quotes or double quotes. 
+ * Unlike other languages, there is no difference in behaviour. 
+ * I recommend always using `"`, unless you want to create a string that contains multiple `"`.
+
+```{r}
+string1 <- "This is a DNA string: AAAGGCGCGAAGG"
+string2 <- 
+"If I want to include a quote: 'AAAGG' inside a string, I use single quotes, for the quote"
+string3 <- 'But you can also create a string and quote "AAGG" as a quote like this'
+```
+
+## Every "quote" needs a friend
+If you forget to close a quote, you'll see `+`, the continuation character:
+
+```
+> "This is a string with an opening quote that does not have a friend... 
++ 
++ 
++ HELP I'M STUCK
+```
+
+If this happen to you, press Escape and try again!
+
+## Escape with "\\"
+
+To include a literal single or double quote in a string you can use `\` to "escape" it:
+```{r}
+double_quote <- "\"" # or '"'
+single_quote <- '\'' # or "'"
+```
+
+That means if you want to include a literal backslash, you'll need to double it up: `"\\"`.
+To see the raw contents of the string, use `writeLines()`:
+```{r}
+x <- c("\"", "\\")
+x
+## To see what the escaped string translates to
+writeLines(x)
+```
+
+## Special characters
+ 
+ * There are a handful of other special characters. The most common are `"\n"`, newline, and `"\t"`, tab, but you can see the complete list by requesting help on `"`: `?'"'`, or `?"'"`. 
+ * Strings like `"\u00b5"`, are a way of writing non-English characters that work on all OS platforms:
+
+```{r}
+micro <- "\u00b5"
+micro
+writeLines(micro)
+```
+
+## String length
+ * Base R contains many functions to work with strings but we'll avoid them because they can be inconsistent
+ * We'll use functions from {stringr}. 
+ * These have more intuitive names, and all start with `str_`. 
+ * For example, `str_length()` tells you the number of characters (of each element) in a string (or character vector):
+
+```{r}
+str_length(c("Autobots!", "transform", "and roll out!"))
+```
+
+## Combining strings
+To combine two or more strings, use `str_c()`:
+```{r}
+str_c("My favorite autobot is", "Perceptor")
+```
+
+Use the `sep` argument to control how they're separated:
+```{r}
+str_c("Autobot", "Perceptor", sep = "[::..::]")
+```
+
+## Vectorization
+As shown above, `str_c()` is vectorised, and it automatically recycles shorter vectors to the same length as the longest:
+```{r}
+str_c("prefix-", c("a", "b", "c"), "-suffix")
+```
+
+## Collapse a vector of multiple strings
+Use `collapse`:
+```{r}
+str_c(c("x", "y", "z"), collapse = "/")
+```
+
+## Subsetting strings
+You can extract parts of a string using `str_sub()`. As well as the string, `str_sub()` takes `start` and `end` arguments which give the (inclusive) position of the substring:
+```{r}
+x <- c("Apple", "Banana", "Pear")
+str_sub(x, 1, 3)
+# negative numbers count backwards from the end of a string
+str_sub(x, -3, -1)
+```
+
+Note that `str_sub()` won't fail if the string is too short: it will just return as much as possible:
+```{r}
+str_sub("a", 1, 5)
+```
+
+## Type case 
+
+ * To change the type face from capitals to lower case us `str_to_lower()` 
+ * You can also use `str_to_upper()` or `str_to_title()`. 
+
+# Regular Expressions
+
+## Matching patterns with regular expressions
+
+ * Regexps are a very terse language that allow you to describe patterns in strings. 
+ * Once you understand them, you'll find them extremely useful. 
+ * Remember Yoda: **"The greatest teacher, failure is!"**
+
+## "str_view" and "str_view_all"
+To learn regular expressions, we'll use `str_view()` and `str_view_all()`. These functions take a character vector and a regular expression, and show you how they match. 
+
+We'll limit ourselves to simple regular expressions and pattern matching in this demo 
+
+## Basic matches
+The simplest patterns match exact strings: 
+`str_view()` shows the **first** match
+```{r}
+x <- c("AAAAGGCGC", "CCCGCGAATTT", "TTTCGCGCGCG")
+str_view(x, "GC")
+```
+
+**What do you notice on the match in the last string?**
+
+## Match all
+```{r}
+x <- c("AAAAGGCGC", "CCCGCGAATTT", "TTTCGCGCGCG")
+str_view_all(x, "GC")
+```
+
+## The next step up in complexity is "`.`" 
+This matches any character (except a newline):
+```{r}
+str_view_all(x, ".A.")
+str_view_all(x, "(.A|C.)") ## pattern ending with A or starting with C
+```
+
+## Using \ (escapes) in pattern matching regex
+If "`.`" matches any character, how do you match the character "`.`"? 
+
+ * You need to use an "escape" to tell the regular expression you want to match it exactly, not use its special behaviour. 
+ * To match an `.`, you need the regexp `\.`. 
+ * We use strings to represent regular expressions, and `\` is also used as an escape symbol in strings. 
+ *To create the regular expression `\.` we need the string `"\\."`. 
+
+```{r}
+# To create the regular expression, we need \\
+dot <- "\\."
+# But the expression itself only contains one dot:
+writeLines(dot)
+```
+
+## And this tells R to look for an explicit dot
+```{r}
+str_view(c("abc", "a.c", "feg"), "\\.c")
+writeLines("\\.c")
+```
+
+## Anchors
+By default, regular expressions will match any part of a string. It's often useful to _anchor_ the regular expression so that it matches from the start or end of the string. You can use:
+
+ * `^` to match the start of the string (head) 
+ * `$` to match the end of the string (tail)
+ 
+"If you start with power, you will end up with money" - Jenny Brian, 2015, CSAMA Course, Italian Alpes 
+ 
+## If you start with power (^), you end up with money ($)
+```{r}
+x <- c("AAATTCCC", "AAATATT", "AACGGCGCA")
+str_view(x, "^A")
+str_view(x, "A$")
+```
+
+## To force a regular expression to only match a complete string, anchor it with both `^` and `$`:
+```{r}
+x <- c("AAATATTCCC", "AAATATT", "AACGGCGCA")
+str_view(x, "AAATATT")
+str_view(x, "^AAATATT$")
+```
+
+## Character classes and alternatives
+There are a number of special characters to use in matching:
+
+* `\d`: matches any digit.
+* `\s`: matches any whitespace (e.g. space, tab, newline).
+* `[abc]`: matches a, b, or c.
+* `[^abc]`: matches anything except a, b, or c.
+* `[:alnum:]`: matches all numbers AND digits (alpha-numericals)
+
+Remember, to create a regular expression containing `\d` or `\s`, you'll need to escape the `\` for the string, so you'll type `"\\d"` or `"\\s"`.
+
+## Alternation to choose between patterns
+
+ * Use _alternation_ to pick between one or more alternative patterns. 
+ * `abc|d..f` will match either '"abc"', or `"deaf"`, `doof`, `deef`,`daaf`, etc. 
+ * The precedence for `|` is low, so that `abc|xyz` matches `abc` or `xyz` not `abcyz` or `abxyz`. 
+ 
+## If precedence (which comes first?) ever gets confusing, use parentheses to make it clear what you want:
+
+```{r}
+str_view(c("grey", "gray", "greay"), "gr(e|a)y")
+```
+
+## Repetition
+
+The next step up in power involves controlling how many times a pattern matches:
+
+* `?`: 0 or 1
+* `+`: 1 or more
+* `*`: 0 or more
+
+```{r}
+x <- c("AAATATACCAA", "CCCGCGCGC", "AAATCCCCGGCGCCC")
+str_view_all(x, "CCC?") ## ? (question mark) : 0 or 1 occurrences
+str_view_all(x, "CC+") ## :  1 or more occurrences
+str_view_all(x, "C{3}") ##  : exactly {n} times (can be any number)
+
+```
+
+## Combine things
+```{r}
+str_view(x, "[C].+A*")
+```
+
+## Precendence of repetition
+Note that the precedence of these operators is high, so you can write: `colou?r` to match either American or British spellings. That means most uses will need parentheses, like `bana(na)+`.
+
+## The previous "banana" example repeated
+```{r}
+fruits <- c("apple", "banana", "pear")
+str_view_all(fruits, ".a.+")
+str_view_all(fruits, ".(a.)+")
+str_view_all(fruits, "(.a).+")
+```
+
+## Specify the number of matches
+
+* `{n}`: exactly n
+* `{n,}`: n or more
+* `{,m}`: at most m
+* `{n,m}`: between n and m
+
+```{r}
+x <- "1888 is the longest year in Roman numerals: MDCCCLXXXVIII"
+str_view(x, "C{2}")
+str_view(x, "C{2,}")
+
+```
+
+```{r}
+str_view(x, "C{2,3}")
+```
+
+## Grouping and backreferences
+
+Earlier, you learned about parentheses as a way to disambiguate complex expressions. They also define "groups" that you can refer to with _backreferences_, like `\1`, `\2` etc. For example, the following regular expression finds all fruits that have a repeated pair of letters.
+
+```{r}
+str_view(fruit, "(..)\\1", match = TRUE)
+```
+
+# Regex tools
+
+## What can you do with regex tools?
+With the {stringr} package you can:
+
+* Determine which strings match a pattern.
+* Find the positions of matches.
+* Extract the content of matches.
+* Replace matches with new values.
+* Split a string based on a match.
+
+## Be aware that regular expressions can become quite complex, really fast. A word of caution before we continue: because regular expressions are so powerful, it's easy to try and solve every problem with a single regular expression. In the words of Jamie Zawinski:
+
+__"Some people, when confronted with a problem, think “I know, I’ll use regular expressions.” Now they have two problems."__  
+
+As a cautionary tale, check out this regular expression that checks if a email address is valid:
+
+##
+```
+(?:(?:\r\n)?[ \t])*(?:(?:(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t]
+)+|\Z|(?=[\["()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:
+\r\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(
+?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ 
+\t]))*"(?:(?:\r\n)?[ \t])*))*@(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\0
+31]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\
+](?:(?:\r\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+
+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:
+(?:\r\n)?[ \t])*))*|(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z
+|(?=[\["()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)
+?[ \t])*)*\<(?:(?:\r\n)?[ \t])*(?:@(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\
+r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[
+ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)
+?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t]
+)*))*(?:,@(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[
+ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*
+)(?:\.(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t]
+)+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*))*)
+*:(?:(?:\r\n)?[ \t])*)?(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+
+|\Z|(?=[\["()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r
+\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:
+\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t
+]))*"(?:(?:\r\n)?[ \t])*))*@(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031
+]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](
+?:(?:\r\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?
+:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?
+:\r\n)?[ \t])*))*\>(?:(?:\r\n)?[ \t])*)|(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?
+:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?
+[ \t]))*"(?:(?:\r\n)?[ \t])*)*:(?:(?:\r\n)?[ \t])*(?:(?:(?:[^()<>@,;:\\".\[\] 
+\000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|
+\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?:[^()<>
+@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|"
+(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)?[ \t])*))*@(?:(?:\r\n)?[ \t]
+)*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\
+".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?
+:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[
+\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*))*|(?:[^()<>@,;:\\".\[\] \000-
+\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|\\.|(
+?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)?[ \t])*)*\<(?:(?:\r\n)?[ \t])*(?:@(?:[^()<>@,;
+:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([
+^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\"
+.\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\
+]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*))*(?:,@(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\
+[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\
+r\\]|\\.)*\](?:(?:\r\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] 
+\000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]
+|\\.)*\](?:(?:\r\n)?[ \t])*))*)*:(?:(?:\r\n)?[ \t])*)?(?:[^()<>@,;:\\".\[\] \0
+00-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|\\
+.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?:[^()<>@,
+;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|"(?
+:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)?[ \t])*))*@(?:(?:\r\n)?[ \t])*
+(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".
+\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t])*(?:[
+^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\]
+]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*))*\>(?:(?:\r\n)?[ \t])*)(?:,\s*(
+?:(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\
+".\[\]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)?[ \t])*)(?:\.(?:(
+?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[
+\["()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)?[ \t
+])*))*@(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t
+])+|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*)(?
+:\.(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|
+\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*))*|(?:
+[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".\[\
+]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)?[ \t])*)*\<(?:(?:\r\n)
+?[ \t])*(?:@(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["
+()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*)(?:\.(?:(?:\r\n)
+?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>
+@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*))*(?:,@(?:(?:\r\n)?[
+ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,
+;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*)(?:\.(?:(?:\r\n)?[ \t]
+)*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\
+".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*))*)*:(?:(?:\r\n)?[ \t])*)?
+(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\["()<>@,;:\\".
+\[\]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)?[ \t])*)(?:\.(?:(?:
+\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z|(?=[\[
+"()<>@,;:\\".\[\]]))|"(?:[^\"\r\\]|\\.|(?:(?:\r\n)?[ \t]))*"(?:(?:\r\n)?[ \t])
+*))*@(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])
++|\Z|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*)(?:\
+.(?:(?:\r\n)?[ \t])*(?:[^()<>@,;:\\".\[\] \000-\031]+(?:(?:(?:\r\n)?[ \t])+|\Z
+|(?=[\["()<>@,;:\\".\[\]]))|\[([^\[\]\r\\]|\\.)*\](?:(?:\r\n)?[ \t])*))*\>(?:(
+?:\r\n)?[ \t])*))*)?;\s*)
+```
+## Detect matches
+To determine if a character vector matches a pattern, use `str_detect()`. It returns a logical vector the same length as the input:
+```{r}
+x <- c("apple", "banana", "pear")
+str_detect(x, "e")
+```
+
+ * When you use a logical vector in a numeric context, `FALSE` becomes 0 and `TRUE` becomes 1. 
+ * That makes `sum()` and `mean()` useful if you want to answer questions about number of matches across a larger vector:
+
+## "str_detect()" examples
+```{r}
+# How many common words start with t?
+sum(str_detect(words, "^t"))
+# What proportion of common words end with a vowel?
+mean(str_detect(words, "[aeiou]$"))
+```
+
+A common use of `str_detect()` is to select the elements that match a pattern. You can do this with logical subsetting, or the convenient `str_subset()` wrapper:
+
+## `str_subset()`
+```{r}
+words[str_detect(words, "x$")]
+str_subset(words, "x$")
+```
+
+## Match in a dataframe
+Typically, however, your strings will be one column of a data frame, and you'll want to use filter instead:
+
+```{r}
+df <- tibble(
+  word = words, 
+  i = seq_along(word) ## i is an index indicating the row position of the word
+)
+df %>% 
+  filter(str_detect(words, "x$"))
+```
+
+## Counting matches in a string
+```{r}
+x <- c("CCCGGTTTAAAATGTAACCGCGTAG", "AAAATATGGGTGTGATGATGTAGTAG")
+str_view_all(x, "ATG")
+str_count (x, "ATG")
+str_view_all(x, "TAG")
+str_count(x, "TAG")
+```
+
+## Extract matches
+
+ * To extract the actual text of a match, use `str_extract()`. 
+ * Use the [Harvard sentences](https://en.wikipedia.org/wiki/Harvard_sentences), which were designed to test VOIP systems, but are also useful for practicing regexps. 
+ * These are provided in `stringr::sentences`:
+
+```{r}
+length(sentences)
+head(sentences)
+```
+
+## Find all sentences that contain a certain colour
+Imagine we want to find all sentences that contain a colour. We first create a vector of colour names, and then turn it into a single regular expression:
+
+```{r}
+colours <- c("red", "orange", "yellow", "green", "blue", "purple")
+colour_match <- str_c(colours, collapse = "|")
+colour_match
+```
+
+## Extract the colours 
+Now we can select the sentences that contain a colour, and then extract the colour to figure out which one it is:
+```{r}
+has_colour <- str_subset(sentences, colour_match)
+head(has_colour)
+```
+
+To get all matches, use `str_extract_all()`. It returns a list:
+```{r}
+head(str_extract_all(sentences, colour_match))
+```
+
+## Replacing matches
+
+`str_replace()` and `str_replace_all()` allow you to replace matches with new strings. The simplest use is to replace a pattern with a fixed string:
+
+```{r}
+x <- c("apple", "pear", "banana")
+str_replace(x, "[aeiou]", "-")
+str_replace_all(x, "[aeiou]", "-")
+```
+
+## Multiple replacements
+With `str_replace_all()` you can perform multiple replacements by supplying a named vector:
+
+```{r}
+x <- c("1 house", "2 cars", "3 people")
+str_replace_all(x, c("1" = "one", "2" = "two", "3" = "three"))
+```
+
+## Splitting
+
+Use `str_split()` to split a string up into pieces. For example, we could split sentences into words:
+
+```{r}
+sentences %>%
+  head(5) %>% 
+  str_split(" ")
+```
+
+You can use `simplify = TRUE` to return a matrix:
+
+```{r}
+sentences %>%
+  head(5) %>% 
+  str_split(" ", simplify = TRUE)
+```
+
+
+## Splitting up to pieces
+You can also request a maximum number of pieces:
+```{r}
+fields <- c("Name: Marc", "Country: NL", "Age: 46")
+fields %>% str_split(": ", n = 2, simplify = TRUE)
+```
+
+## Find matches
+
+`str_locate()` and `str_locate_all()` give you the starting and ending positions of each match. These are particularly useful when none of the other functions does exactly what you want. You can use `str_locate()` to find the matching pattern, `str_sub()` to extract and/or modify them.
+
+```{r}
+dna <- str_c("AAAAAGCGGGCGC")
+ind <- str_locate_all(dna, "AA")
+str_sub(dna, start = ind[[1]][1,1], end = ind[[1]][1,2])
+
+```
+
