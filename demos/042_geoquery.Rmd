@@ -1,0 +1,186 @@
+---
+title: "Using the Bioconductor package `{GEOquery}` to retrieve biological data from the NCBI GEO database"
+author: "Alyanne De Haan, Ph.D.; Marc. A.T. Teunis, Ph.D."
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r notes, include=FALSE}
+# it was getting a bit slow in my laptop
+# style="background-color: white;"
+
+library(tidyverse) 
+library(GEOquery)
+
+```
+ 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## GEOquery (1)
+
+### Introduction
+
+In the previous pages we have mainly used biomaRt to get data from the ensembl database. Another database we would like to introduce to you is the GEO: Gene Expression Omnibus. It is a public repository of functional genomic data obtained by microarray or next generation sequencing, and contains a wide range of high-throughput experimental data. 
+As GEO has its own specific formats, we will use a different package from Bioconductor to query it: GEOquery.
+
+### Data organisation
+GEO is a public repository, so researchers can submit their (full, raw) dataset to the database. Here, 4 different types of information is saved about each submitted _dataset_:
+
+1. GEO Platform (GPL). These files describe the particular type of microarray that was used in generating the dataset. They are annotation files.  
+
+2. GEO Sample (GSM). Files with descriptions of the conditions under which an individual Sample was handled, the manipulations it underwent, and the abundance measurement of each element derived from it. Files contain all the data from the use of a single chip. For each gene there will be multiple scores including the main one, held in the VALUE column.The original raw datafile is found here.  
+  
+3. GEO Series (GSE). Lists of GSM files that together form a single experiment. Series records may also contain a description of the overall experiment, tables describing extracted data, summary conclusions, or analyses. Series describe for instance which related Samples are considered to be part of a group, how these Samples are related, and if and how samples are ordered.  
+
+4. GEO Dataset (GDS). GEO Datasets are rendered using the information under 1 (GPL), 2 (GSM) and 3 (GSE). into curated files that hold a summarised combinations of a GSE file and its GSM files. They contain normalised expression levels for each gene from each sample (i.e. just the VALUE field from the GSM file). 
+
+So to summarise, everyone can submit their microarray or next generation sequencing data to GEO, it is then stored in a structured format (GPL, GSM, GSE and GDS for each dataset), and everyone (well, everyone with a computer and internet...) has free access to all this data (open data)! [Open data](https://www.openaccess.nl/nl) is considered good practice and often requested when you publish your findings. But it also makes you data citable (it gets digital object identifiers, DOIs), encourages the reuse of data for new research questions, and gives the oppertunity to check if someone else's claim is indeed supported by their data. Also, storing this data in databases using the same format allows for meta-analyses.
+
+### Installation
+
+* And it gives acces to real datasets for us as well. Let's get some.  
+  To install GEOquery, type in the console:
+```{r, eval=FALSE}
+# BiocManager::install("GEOquery")
+```
+
+* Make sure to load the package once in every session you use it, or on top of your script:
+```{r, eval=FALSE}
+library(GEOquery)
+```
+
+## Downloading GDS datasets
+
+* To get access to a dataset (GDS), you download it, put it on your computer (or on the server if you are working on there) and load it.
+Google the GDS id to find out what this example is about.
+```{r,results = "hide"}
+#Download GDS file, put it in the current directory, and load it. For instance dataset GDS858:
+gds_858 <- getGEO(
+  "GDS858", 
+  destdir = ".", GSEMatrix = TRUE) ## puts the downloaded files in the root of your project
+```
+
+* And to open a GDS file already on you computer (even if it's compressed) you can use the same function:
+```{r, eval=FALSE}
+#Or, open an existing GDS file (even if its compressed):
+gds_858_local <- getGEO(
+  filename='GDS858.soft.gz')
+```
+
+* Inspecting the contents of the dataset (metadata: data about the data). Let's see what this dataset is about.
+```{r,results = "hide"}
+# metadata
+meta_data <- Meta(gds_858) %>% 
+  print()
+```
+
+
+```{r}
+# check the available columns:
+colnames(Table(gds_858))
+
+```
+
+* and to look at the actual data; the expression matrix with probe_ids and expression values
+```{r}
+Table(gds_858) %>% as_tibble 
+```
+
+```{r}
+#or
+head(Table(gds_858)) # to see the top rows, but for all columns and un-abbreviated content.
+```
+
+* Not all datasets within GEO have the GDS already available. Actually, most of them do not. Also, some information is stored in the GSE only. To load a GSE, use getGEO() again. It will give you a a list of ExpressionSet objects. (Note that the GSE id is not the same number as in the GDS record.) 
+
+```{r,warning = FALSE,MESSAGE=FALSE}
+# find the GSE number if you have the GDS: using Meta(gds_858)$reference_series
+gse_923 <- getGEO(
+  'GSE923', destdir=".", GSEMatrix = TRUE
+  )
+show(gse_923)
+```
+
+* notice that gse_923 now has 1 element (GSE923_series_matrix.txt.gz) as one platform was used in this experiment. GSE records can contain multiple datasets and thus multiple lists (for instance, if they did both gene expression and DNA methylation). In that case, you can access them using gse_923[[1]] and gse_923[[2]]. In this case, there is only one list of ExpressionSet objects within the GSE record, which we will select.
+
+```{r,results = "hide"}
+gse_923_1 <- gse_923[[1]]
+```
+
+* If you ran the previous 2 code blocks, you may have noticed that it mentioned a function to get more information about the experiment that generated this dataset. You can find information on the authors, a summary of the experiment, whether it is microarray or sequencing data etc, publication data, pubmed-id, etc.
+```{r,results = "hide"}
+experimentData(gse_923_1)
+```
+
+Let's ask for some of the information in the GSE:
+```{r}
+# check the dimensions and get a feel for what's inside:
+pData(gse_923_1) %>% as_tibble
+head(pData(gse_923_1)[, 1:3])
+```
+
+```{r}
+# which variables are available?
+colnames(pData(gse_923_1))
+```
+
+```{r}
+# check the content of some variables. 
+gse_923_1$title
+gse_923_1$geo_accession
+```
+
+
+* for some datasets, there are tables available with the sample information, which can be retrieved with:
+```{r, eval=FALSE}
+getGSEDataTables('GDS923')
+```
+
+*  This will have given you an error, as no seperate GSE tables are available in dataset GDS923. There are for dataset GSE3494, for example:
+  
+```{r, eval=FALSE}
+df1 <- getGSEDataTables("GSE3494")
+map(df1, head)
+
+```
+
+* Information about the genes or the microarray probes in the experiment is found with:  
+```{r}
+fData(gse_923_1) %>% as_tibble
+```
+
+* The expression data can be retrieved with exprs(). We can see that it is 22283 rows long and 19 columns wide. These are the  samples in the experiment (also see `gse_923_1$geo_accession` )
+```{r}
+exprs(gse_923_1) %>% as_tibble
+```
+
+* And finally, you can make subsets of the ExpressionSet object. Just like subsetting in matrices, the first argument subsets the features and the second argument subsets the samples:
+
+```{r}
+# subset the first 5 features and the first 3 samples:
+gse_923_1[1:5, 1:3]
+```
+
+```{r}
+# subset consisting of only the sample CONTROL 1:
+gse_923_1[ , gse_923_1$title == "CONTROL 1"]
+
+```
+
+
+<!-- https://www.stat.purdue.edu/bigtap/online/docs/Introduction_to_Microarray_Analysis_GSE15947.html -->
+
+<!-- https://warwick.ac.uk/fac/sci/moac/people/students/peter_cock/r/heatmap/ -->
+
+<!-- https://github.com/BenjaminAdelaide/DNAMeth_Microarray_Tutorial/blob/master/Tutorial.md -->
+
+## Next steps
+The next steps in the course will explain further how to analyze for example RNAsequencing data that you retrieve from GEO. We will work though a full example where we reanalyze the data and recreate a heatmap for differentially expressed genes of a downloaded dataset. The workflow for `{Biomart}` and `{GEOquery}` and the lessons that follow are crucial for taking the exam of this course. 
+
+
+
+

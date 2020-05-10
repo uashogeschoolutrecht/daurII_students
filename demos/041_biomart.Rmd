@@ -1,0 +1,480 @@
+---
+title: "Using the Bioconductor package `{biomaRt}` to find biological data"
+author: "Alyanne De Haan, Ph.D.; Marc A.T. Teunis, Ph.D."
+affiliation: "University of Applied Sciences, Utrecht" 
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r notes, include=FALSE}
+# style="background-color: white;"
+
+```
+ 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Prerequisites
+```{r load-packages}
+library(biomaRt)
+library(Biostrings)
+library(seqinr)
+library(tidyverse)
+```
+
+## Bioconductor
+
+Up until now, we have used several packages which we added to R from CRAN. For instance, at some point you will have typed this to install the tidyverse package: `install.packages("tidyverse")`
+
+The Comprehensive R Archive Network (CRAN) is the main repository for R packages, but not the only one! Many of the R packages we will use are hosted through the [Bioconductor project](https://bioconductor.org), an open source software repository specifically for  high-throughput biological assay data.
+
+It started around 2001 as a platform for understanding analysis of microarray data and by now contains more than 1,500 packages with functions for data analysis in sequencing (RNASeq, ChIPSeq, single-cell, called variants, microarrays (methylation, expression, copy number, etc.), flow cytometry, proteomics and much more.
+
+As you will see, the bioconductor packages are very relevant for us.
+
+### Get the latest version of bioconductor (core packages)
+
+Let's get the `{BiocManager}` package in your R environment (in case you are working on the server, it will be installed on the server already). With `{BiocManager}` you can install packages from Bioconductor.
+
+It can be installed using the following code:
+```{r, eval=FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install()
+```
+
+### Installing bioconductor packages
+
+(Again: if you are working on the server, these will be installed already. You will still have to load them every session you want to use them, using `library()`)
+
+You can install specific packages from bioconductor using the Biocmanager. Install the Biostrings package and a few more packages we will use with the following code:
+```{r, eval=FALSE}
+#BiocManager::install("Biostrings")
+#BiocManager::install("biomaRt")
+#BiocManager::install("seqinr")
+#BiocManager::install("IRanges")
+#BiocManager::install("GenomicRanges")
+
+```
+
+Just like CRAN packages, Bioconductor packages need to be installed only once. Then, in every script (or within every session) you are using a specific package, you will need to load it using `library()`. 
+
+### Vignettes
+
+Bioconductor has an extensive help system. Try typing:
+```{r, eval=FALSE}
+browseVignettes("Biostrings")
+```
+For some reason this does not work on the server and you will not be able to view the vignettes on the server. Luckily, each Bioconductor package has its own landing page on the Bioconductor website. The [`{Biostrings}` package vignettes can be found here:]( https://bioconductor.org/packages/release/bioc/html/Biostrings.html) 
+
+The package-landing page offeres other useful information such as the current released stable version of the software as a downloadable file or the citation to the package. If you are using R packages for official publications, it is good practice to cite at least the core packages in your manuscript. For example:
+```{r}
+citation("Biostrings")
+citation("ggplot2")
+citation("DESeq2")
+```
+
+### `dplyr::select()`
+After loading BiomaRt, select() and filter() from the dplyr package (as we used in daur1) may give an error as there is a function within BiomaRt with the same name. In case you want to use select() from the dplyr package, tell R: to do so:
+
+```{r}
+## seed for reproducibility
+set.seed(123)
+
+## create dummy data
+data <- tibble(
+  a = rnorm(100),   
+  b = rnorm(100),  
+  c = rnorm(100)
+)
+
+## select column a and c
+dataframe <- data %>% 
+  dplyr::select(a, c) %>%
+  print()
+```
+instead of
+```{r, eval=FALSE}
+dataframe %>% select(columnyouwant)
+```
+
+
+## `{biomaRt} (1)
+
+### Introduction
+The Bioconductor `{biomaRt}` package is an important framework to access and retrieve database information on genes and proteins. Here we demonstrate how to use this package to obtain DNA and protein sequences from the ENSEMBL and UNIPROT databases. 
+
+Load some packages we will use and take a look at the vignette for `{biomaRt}`:
+```{r}
+library(Biostrings)
+library(seqinr)
+library(tidyverse)
+library(biomaRt)
+# browseVignettes("biomaRt")
+```
+
+
+### selecting databases and datasets
+* With BiomaRt you can get data from a lot of databases. Which databases are currently available can be seen by typing: 
+```{r}
+listMarts()
+```
+This function returns a list of BioMart databases to which `{biomaRt}` can connect to
+
+* We will be using the ENSEMBL database first:
+Create a `mart` object to get started.
+```{r}
+mart <- useMart(biomart = "ensembl")
+mart
+```
+
+ * If you look at this `mart` object it will state "Using the ENSEMBL_MART_ENSEMBL BioMart database. No dataset selected." Herein lies a clue for the next step.
+
+Let's see which datasets are available:
+```{r }
+datasets <- listDatasets(mart = mart) %>% 
+  as_tibble() %>%
+  print()
+
+```
+If you look at the datasets in the viewer in RStudio, you can take a closer look.
+
+ * You can use str_detect to look for datasets with specific words in the description: Here we try to find the dataseth for the Sloth (_Luiaard in Dutch_) 
+```{r }
+ind <- str_detect(string = datasets$description,
+                pattern = "(S|s)loth.*")
+
+datasets[ind,]
+```
+There appears to be one dataset for the two-toed Sloth (_Choloepus hoffmanni_), [see:](https://en.wikipedia.org/wiki/Hoffmann%27s_two-toed_sloth)
+
+ * We will select the Human (_Homo sapiens_) dataset available from 'Ensembl'  
+ There are two ways to get the complete dataset for _H. sapiens_.  
+ Using a previously defined `biomart` as we did with `mart <- useMart(biomart = "ensembl")`  
+
+  (R might take some time (up to a minute) to run this)
+```{r}
+h_sapiens <- useDataset(
+  dataset = "hsapiens_gene_ensembl", 
+  mart=mart)
+h_sapiens
+```
+
+  Or you can define the biomart` and `dataset` both in one call:
+```{r eval=FALSE}
+h_sapiens_2 <- useMart(
+  biomart = "ensembl", 
+  dataset="hsapiens_gene_ensembl") 
+```
+
+ * Now we can work with this dataset. Generally when you start working on a dataset, you will    have a question in mind and start a query. A query means a request for information from the     database. To tell the database which information you want (__so the inputs for a biomaRt        query__) you use filters. Check which filters are available for a specific dataset using:  
+
+```{r}
+## filters are input of your query
+filters = listFilters(h_sapiens) %>% 
+  as_tibble() %>%
+  print()
+```
+
+* Attributes are the __outputs of a `{biomaRt}` query__, we can similarly check what kinds of information we could ask to receive:
+```{r}
+## attributes are outputs of your query (info you put in)
+attributes <- listAttributes(h_sapiens) %>%
+  as_tibble() %>%
+  print()
+```
+
+* Remember you can search for stuff with str_detect
+```{r}
+head(filters) # check which variables are available to search in
+filters[str_detect(string = filters$name,
+                pattern = "(E|e)ntrez.*"),]
+
+```
+
+Now let's use this to do an actual query. Suppose we have a list of _Affymetrix identifiers_ from the u133plus2 microarray platform and we want to retrieve the corresponding _EntrezGene identifiers_ using the Ensembl mappings.(_This is an example from the The biomaRt users guide, by Steffen Durinck, Wolfgang Huber, and Mike Smith_)
+
+__input:__ the u133plus2 platform will be the filter for this query (A) and as values for this filter we use our list of Affymetrix identifiers (B). 
+
+__output:__ As output we want a mapping of the two identifiers (EntrezGene and u133plus2), so these will be our attributes (C).
+  
+* Let's send a query to do this:
+```{r}
+## values
+affyids <- c("202763_at","209310_s_at","207500_at") # (B)
+
+## filters, values and attributes
+annot <- getBM(
+  attributes = c('affy_hg_u133_plus_2', 'entrezgene_id'), # (C)
+  filters = 'affy_hg_u133_plus_2', values = affyids, # (A) using (B)
+  mart = h_sapiens) %>% #which dataset to use
+    print()
+
+```  
+  
+* Now we can for instance get the `gene symbols` for the `entrezgene_id`s. note that we use some of the output (the entrezgene_id variable) of the previous query as filter values here!
+```{r}
+human_annot <- getBM(
+  attributes = c('external_gene_name', 'ensembl_gene_id'), 
+  filters = 'entrezgene_id', values = annot$entrezgene_id,
+  mart = h_sapiens) %>%
+    as_tibble %>%
+    mutate(species = "H. sapiens") %>%
+    print()
+
+```  
+
+
+* If you want to add more annotations for these genes (so, if you want to see more variables in the output) we simple add more attributes from the `attributes` list.
+```{r}
+getBM(
+  attributes = c(
+    'external_gene_name',
+    'ensembl_gene_id',
+    'chromosome_name',
+    'exon_chrom_start',
+    'exon_chrom_end',
+    'description'), 
+  filters = 'entrezgene_id',
+  values = annot$entrezgene_id,
+  mart = h_sapiens) %>%
+    dplyr::mutate(species = "H.sapiens") %>% ## remember to use ::
+    dplyr::select(species, external_gene_name:description) %>% ## remember to use ::
+    as_tibble()
+```
+
+## `{biomaRt}` (2)  
+
+* Let's go and find homologs for our genes of interest in mice ( _Mus musculus_ : house mouse) and orangutan ( _Pongo abelii_ : Sumatran orangutan). For this, we want to change the attributes of our query. Note that we use the output from our first query (annot) again to filter. 
+
+_in case you are thinking: "well, this is nice and all, but I can just look those up online rigth? Way faster!" Yes.. It is, perhaps, if you need to look up one thing in one database. Now imagine having to do that -say- 100 times... _
+
+```{r}
+homologs <- getBM(
+  attributes = c(
+    'pabelii_homolog_ensembl_gene', 
+    'mmusculus_homolog_ensembl_gene',
+    'ensembl_gene_id'), 
+  filters = 'entrezgene_id',
+  values = annot$entrezgene_id,
+  mart = h_sapiens) %>%
+    print()
+
+```
+  
+* We will want to annotate the homologs, using the relevant `datasets` and `biomarts`  
+  first, select the dataset you want to use (in this case pabelii_gene_ensembl)
+```{r}
+oran_utan <- useMart(
+  biomart = "ensembl", 
+  dataset="pabelii_gene_ensembl") %>% 
+    print()
+```
+
+* these are the homologs we're looking for :
+
+```{r}
+homologs_oran <- getBM(
+  attributes = c(
+    'external_gene_name', 
+    'ensembl_gene_id'), 
+  filters = 'ensembl_gene_id',
+  values = homologs$pabelii_homolog_ensembl_gene,
+  mart = oran_utan) %>% 
+    mutate(species = "P. abelii") %>%
+    print()
+
+```
+
+* Do the same for the mouse:
+```{r}
+mus_musculus <- useMart(
+  biomart = "ensembl", 
+  dataset="mmusculus_gene_ensembl") %>% 
+    print()
+
+homologs_mmusculus <- getBM(
+  attributes = c(
+    'external_gene_name', 
+    'ensembl_gene_id'), 
+  filters = 'ensembl_gene_id',
+  values = homologs$mmusculus_homolog_ensembl_gene,
+  mart = mus_musculus) %>% 
+    mutate(species = "M. musculus") %>%
+    print() 
+```
+
+
+* Combine the data in one dataframe:
+```{r}
+all_data <- dplyr::bind_rows(
+  human_annot, 
+  homologs_oran, 
+  homologs_mmusculus)
+```
+
+* And now you can easily get coding sequences for all these homologs.  
+  We'll do human first.  
+  filter the human ensemble id's from the `all_data` dataframe we just made:
+```{r}
+human_gene_id <- all_data %>%
+  dplyr::filter(species == "H. sapiens") %>%
+  dplyr::select(ensembl_gene_id) 
+```
+ 
+  and use `getSequence()` to get the coding sequences, filter out the unavailable sequences and print the result as a tibble.
+```{r}
+human_sequence <- biomaRt::getSequence(
+  id = human_gene_id$ensembl_gene_id, 
+  type ="ensembl_gene_id",
+  seqType ="coding",
+  mart = h_sapiens) %>%
+    as_tibble() %>%
+    dplyr::filter(coding != "Sequence unavailable") %>%
+    print()
+```
+
+  You can check if you have any duplicate rows in the new dataframe (we don't want that):
+```{r, eval=FALSE}
+duplicated(human_sequence$coding) #check
+unique(human_sequence) # use this function to kick out duplicates if you want
+
+```
+
+* do the same for urangutan:
+```{r}
+oran_gene_id <- all_data %>%
+  dplyr::filter(species == "P. abelii") %>%
+  dplyr::select(ensembl_gene_id)
+  
+
+oran_sequence <- biomaRt::getSequence(id = oran_gene_id$ensembl_gene_id, 
+            type="ensembl_gene_id",
+            seqType="coding",
+            mart= oran_utan) %>%
+  as_tibble() %>%
+  dplyr::filter(coding != "Sequence unavailable")
+
+duplicated(oran_sequence$coding)
+
+```
+
+* and mouse:
+```{r}
+mouse_gene_id <- all_data %>%
+  dplyr::filter(species == "M. musculus") %>%
+  dplyr::select(ensembl_gene_id)
+  
+
+mouse_sequence <- biomaRt::getSequence(id = mouse_gene_id$ensembl_gene_id, 
+            type="ensembl_gene_id",
+            seqType="coding",
+            mart= mus_musculus) %>% 
+  as_tibble() %>%
+  dplyr::filter(coding != "Sequence unavailable")
+
+duplicated(mouse_sequence$coding)
+
+```
+
+* And combine these dataframes with the `all_data` dataframe we had before, into a new dataframe called `all_data_sequence`:
+```{r}
+
+all_sequences <- dplyr::bind_rows(human_sequence,
+                                  oran_sequence,
+                                  mouse_sequence)
+
+# add human sequences
+all_data_sequence <- dplyr::left_join(all_sequences, all_data, by = "ensembl_gene_id")
+
+all_data_sequence <- all_data_sequence %>%
+  as_tibble() %>%
+  arrange(external_gene_name) %>%
+  print()
+
+## are all sequences unique?
+duplicated(all_data_sequence$coding)
+
+```
+
+* Voila, you just made a dataframe with coding sequences for homologs in urangutan and mouse for your genes of interest.
+
+
+## Translate DNA sequence data to protein
+
+* Now you can use the Biostrings package to translate DNA sequences to amino acid sequences.
+
+* First, get the sequence data we found and put it in a `DNAString object` that the Biostrings package will understand:
+```{r,results = "hide"}
+# a single protein
+safe_dna_string_set <- purrr::safely(Biostrings::DNAStringSet)
+
+dna_string_set <- map(all_data_sequence$coding, safe_dna_string_set)
+dna_string_set <- transpose(dna_string_set)
+names(dna_string_set$result) <- all_data_sequence$ensembl_gene_id
+
+dna_string_set$result
+
+# only keep the ones that give a result
+ind <- dna_string_set$result != 'NULL'
+dna_string_set <- dna_string_set$result[ind]
+```
+
+* We will use `{purrr}` to create a safe version of `Biostrings::translate()`.  
+  translate() sometimes throws warnings. We don't want our console filled with warnings, and our script to stop running at every one of them, but we would like to safe them in case we need to check. `safely()` from `{purrr}` makes sure R doesn't stop the execution of your function if something goes wrong and captures the error for future reference. This is especially handy when running scripts that take a while or when you use an iteration!
+  
+```{r}
+safe_translate <- purrr::safely(Biostrings::translate)
+```
+
+* and apply this new safe function to `dna_string_set`, keeping the names from your DNAString object:
+```{r}
+all_proteins <- map(dna_string_set, safe_translate)
+## set names on the items in the list makes them traceble
+names(all_proteins) <- names(dna_string_set)
+```
+
+* Now we have a list of lists with our protein information, which is somewhat cumbersome to work with. Extract results using transpose():
+```{r}
+all_proteins <- purrr::transpose(all_proteins)
+head(all_proteins$result, 3)
+```
+
+* Select only the valid results:
+```{r}
+ind <- all_proteins$result != "NULL"
+all_proteins_valid <- all_proteins$result[ind] 
+head( all_proteins_valid )
+```
+
+* And build a tidy tibble containing the information from `all_proteins_valid`
+
+```{r}
+gene_ids <- names(all_proteins_valid)
+
+
+all_proteins_valid_df <- all_proteins_valid %>% 
+  as.data.frame() %>%
+  t() %>%
+  as_tibble(.name_repair = "unique") %>%
+  dplyr::mutate(ensembl_gene_id = gene_ids) %>% 
+  dplyr::rename(amino_acid_sequence = `...1` ) %>%
+  print()
+
+```
+
+* Now that we have a tibble, we can combine the protein information with the DNA homolog data in one dataframe:
+```{r}
+all_data_protein <- left_join(all_proteins_valid_df,
+                                  all_data,
+                                  by = "ensembl_gene_id") %>% 
+  #dplyr::filter(coding != "Sequence unavailable") %>%
+  print()
+
+# are there duplicates?
+ duplicated(all_data_protein)
+
+```
