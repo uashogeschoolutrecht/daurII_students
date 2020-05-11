@@ -478,3 +478,9 @@ all_data_protein <- left_join(all_proteins_valid_df,
  duplicated(all_data_protein)
 
 ```
+
+## For reproducibility
+```{r}
+sessioninfo::session_info()
+```
+
