@@ -59,16 +59,19 @@ library(GEOquery)
 Google the GDS id to find out what this example is about.
 ```{r,results = "hide"}
 #Download GDS file, put it in the current directory, and load it. For instance dataset GDS858:
+
+dir.create("./tmp")
+
 gds_858 <- getGEO(
   "GDS858", 
-  destdir = ".", GSEMatrix = TRUE) ## puts the downloaded files in the root of your project
+  destdir = "./tmp", GSEMatrix = TRUE) ## puts the downloaded files in the root of your project
 ```
 
 * And to open a GDS file already on you computer (even if it's compressed) you can use the same function:
 ```{r, eval=FALSE}
 #Or, open an existing GDS file (even if its compressed):
 gds_858_local <- getGEO(
-  filename='GDS858.soft.gz')
+  filename='./tmp/GDS858.soft.gz')
 ```
 
 * Inspecting the contents of the dataset (metadata: data about the data). Let's see what this dataset is about.
@@ -76,6 +79,9 @@ gds_858_local <- getGEO(
 # metadata
 meta_data <- Meta(gds_858) %>% 
   print()
+
+# Meta("gds68787")
+
 ```
 
 
@@ -85,22 +91,24 @@ colnames(Table(gds_858))
 
 ```
 
-* and to look at the actual data; the expression matrix with probe_ids and expression values
-```{r}
-Table(gds_858) %>% as_tibble 
-```
 
 ```{r}
 #or
 head(Table(gds_858)) # to see the top rows, but for all columns and un-abbreviated content.
 ```
 
+* and to look at the actual data; the expression matrix with probe_ids and expression values
+```{r}
+x <- Table(gds_858) %>% as_tibble 
+```
+
+
 * Not all datasets within GEO have the GDS already available. Actually, most of them do not. Also, some information is stored in the GSE only. To load a GSE, use getGEO() again. It will give you a a list of ExpressionSet objects. (Note that the GSE id is not the same number as in the GDS record.) 
 
 ```{r,warning = FALSE,MESSAGE=FALSE}
 # find the GSE number if you have the GDS: using Meta(gds_858)$reference_series
 gse_923 <- getGEO(
-  'GSE923', destdir=".", GSEMatrix = TRUE
+  'GSE923', destdir="./tmp", GSEMatrix = TRUE
   )
 show(gse_923)
 ```
@@ -119,7 +127,7 @@ experimentData(gse_923_1)
 Let's ask for some of the information in the GSE:
 ```{r}
 # check the dimensions and get a feel for what's inside:
-pData(gse_923_1) %>% as_tibble
+y <- pData(gse_923_1) %>% as_tibble
 head(pData(gse_923_1)[, 1:3])
 ```
 
@@ -150,12 +158,12 @@ map(df1, head)
 
 * Information about the genes or the microarray probes in the experiment is found with:  
 ```{r}
-fData(gse_923_1) %>% as_tibble
+z <- fData(gse_923_1) %>% as_tibble
 ```
 
 * The expression data can be retrieved with exprs(). We can see that it is 22283 rows long and 19 columns wide. These are the  samples in the experiment (also see `gse_923_1$geo_accession` )
 ```{r}
-exprs(gse_923_1) %>% as_tibble
+zz <- exprs(gse_923_1) %>% as_tibble
 ```
 
 * And finally, you can make subsets of the ExpressionSet object. Just like subsetting in matrices, the first argument subsets the features and the second argument subsets the samples:

@@ -101,7 +101,6 @@ instead of
 dataframe %>% select(columnyouwant)
 ```
 
-
 ## `{biomaRt} (1)
 
 ### Introduction
@@ -159,7 +158,7 @@ There appears to be one dataset for the two-toed Sloth (_Choloepus hoffmanni_), 
 ```{r}
 h_sapiens <- useDataset(
   dataset = "hsapiens_gene_ensembl", 
-  mart=mart)
+  mart = mart)
 h_sapiens
 ```
 
@@ -167,10 +166,17 @@ h_sapiens
 ```{r eval=FALSE}
 h_sapiens_2 <- useMart(
   biomart = "ensembl", 
-  dataset="hsapiens_gene_ensembl") 
+  dataset = "hsapiens_gene_ensembl") 
 ```
 
  * Now we can work with this dataset. Generally when you start working on a dataset, you will    have a question in mind and start a query. A query means a request for information from the     database. To tell the database which information you want (__so the inputs for a biomaRt        query__) you use filters. Check which filters are available for a specific dataset using:  
+
+API - application programmable interface
+
+Query: 
+
+ 1. Input -> `filters` -> `values` 
+ 1. Output -> `attributes`
 
 ```{r}
 ## filters are input of your query
@@ -306,7 +312,6 @@ homologs_mmusculus <- getBM(
     mutate(species = "M. musculus") %>%
     print() 
 ```
-
 
 * Combine the data in one dataframe:
 ```{r}
