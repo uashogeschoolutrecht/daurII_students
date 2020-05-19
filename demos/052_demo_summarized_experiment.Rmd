@@ -1,0 +1,174 @@
+---
+title: "daur2_lesson5_b"
+author: "Marc A.T. Teunis, Alyanne de Haan"
+date: '`r Sys.Date()`'
+output: 
+  html_document: 
+    keep_md: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r libs, include=FALSE}
+
+library(tidyverse)
+library(SummarizedExperiment)
+library(airway)
+library(rentrez)
+
+```
+
+
+
+## Introduction: SummarizedExperiment class, rows and columns
+
+Based on the SummarizedExperiment class vignette.
+
+### A little reminder of the ExpressionSet
+In the previous lesson we encountered the Expressionset objects in GEO. Expression sets are a datacontainer for high throughput array data from expression experiments (in a matrix called _exprs_) and the related metadata. As you will have realised, you can access:
+
+  + (always) expression data  with _exprs()_ ( one row per feature (gene or probe) on the chip and one column per sample. 
+  
+  + phenotypic data (information about the samples) with _pdata()_ (one row per sample, and one column per covariate)
+  
+  + and feature data (information about genes or probe sets) with _fdata()_ (as with the expression data, one row per feature, one column per variable)
+
+Each data point in the exprs matrix reflects how that particular gene or feature was expressed in that particular sample. 
+
+### But there is more
+But the Expressionset is not the only possible datacontainer format in bioconductor.
+
+Sometimes you want to share or analyse data from an experiment with multiple types of observations, such as DNA mutations and abundance of RNA and proteins. For sets of assays with the same information across all rows (e.g., genes or genomic ranges) the datacontainer is called `SummarizedExperiment`. SummarizedExperiment objects can therefore contain multiple matrices with assay data. 
+
+But it can also be used to store data from 1 assay. SummarizedExperiment are based on Expressionsets, but can contain GenomicRanges. `SummarizedExperiment` is therefore often used to store data from sequencing-based experiments (with GenomicRanges in the rows) while `Expressionsets` are more often used for array-based experiments (with features in the rows). In both datacontainers, the columns represent samples.
+
+
+### Structure 
+
+The structure of an SummarizedExperiment object looks like this:
+
+```{r, out.width='50%', fig.align='center', fig.cap='...', echo=FALSE}
+knitr::include_graphics(
+  here::here(
+  'images',
+  'summarizedexperiment.png')
+)
+```
+
+`assay()`, `assays()`: A matrix-like or list of matrix-like objects of identical dimension
+
+  + matrix-like: implements dim(), dimnames(), and 2-dimensional [, [<- methods.
+  
+  + rows: genes, genomic coordinates, etc.
+  
+  + columns: samples, cells, etc.
+  
+`colData()`: Annotations on each column, as a DataFrame.
+
+  + E.g., description of each sample
+  + So this is phenotype (sample) information, like pData for ExpressionSets. 
+  
+`rowData()` and / or `rowRanges(`): Annotations on each row.
+
+  + E.g., rowRanges(): coordinates of gene / exons in transcripts / etc.
+  
+  + E.g., rowData():P-values and log-fold change of each gene after differential expresssion analysis.
+  
+`metadata()`: List of unstructured metadata describing the overall content of the object.
+
+You can subset SummarizedExperiment objects like you would subset R: matrices. So suppose your SummarizedExperiment object is called _se_, you can make a subset containing only the first 10 rows with _se[1:10,]_.
+
+
+As most tutorials, we will use the example RNA sequencing dataset `Airway` to illustrate the use of SummarizedExperiment (paper PMID: 24926665, GEO: GSE52778, remember you learned how to use this information with rentrez and geoquery in a previous lesson.)
+
+__Example (1)__
+```{r, eval=FALSE}
+BiocManager::install("airway")
+```
+```{r}
+library(airway)
+data(airway)
+```
+
+This looks a lot like an Expressionset. You can see that there are 8 samples and 64102 features (genes). But what is this about? Let's check PubMed as we have done before, and use XML package (install.packages("XML") first!) to extract the abstract. Read at least the first 4 sentences of the abstract and make sure you understand what this experiment was investigating. 
+
+__Example (2)__
+```{r, eval=FALSE}
+library(rentrez)
+library(XML)
+
+fetch.pubmed <- entrez_fetch(db = "pubmed", id = 24926665,
+                      rettype = "xml", parsed = T)
+abstract = xpathApply(fetch.pubmed, '//PubmedArticle//Article', function(x) xmlValue(xmlChildren(x)$Abstract))
+```
+
+We can check the phenotypic data:
+__Example (3)__
+```{r}
+colData(airway)
+```
+
+And make subsets based on colData as well. For instance, suppose you only want to analyse data from the treated condition:
+__Example (4)__
+```{r}
+airway[, airway$dex == "trt"]
+```
+
+Colnames() is similar to sampleNames from ExpressionSet and rownames() are like featureNames.
+
+__Example (4)__
+```{r}
+head(rownames(airway))
+```
+
+And the actual measurements data are found with assay() and assays(). This particular dataset has only one assay, and it is called "counts" and it contains RNA sequencing count data:
+__Example (5)__
+```{r}
+assayNames(airway)
+```
+
+
+Let's print the first few rows:
+__Example (6)__
+```{r}
+head(assays(airway)$counts,10)
+```
+
+### Granges
+
+So far so good. This could just have been an ExpressionSet. But SummarizedExperiments have the option to store Genomic Ranges lists for each feature (i.e. row). So in other words: in the assay matrix in the airway dataset, each row contains data from a gene. For each gene, we also get a list (GRanges list) containing the exons of the gene. You can access this with _rowRanges()_. 
+
+
+You can see where the first gene in the assay matrix is located: on chromosome x. Also, it has  17 exons:
+
+__Example (7)__
+```{r}
+rowRanges(airway)[1,]
+```
+
+
+But you can also do it the other way around, and look for the data containing information about a certain region of interest. In this example the interval 100,000 to 110,000 of chromosome 1:
+
+__Example (8)__
+```{r}
+# define region of interest:
+roi <- GRanges(seqnames="1", ranges=100000:1100000)
+# new SummarizedExperiment object containing 74 rows:
+roi_se <- subsetByOverlaps(airway, roi) 
+# print the first 6 rows:
+head(assays(roi_se)$counts,6) 
+
+```
+
+The GRanges object can contain  information about genes on the standard chromosomes, as well as genes or haplotypes of genes on haplotype chromosomes and mitochondrial. So that is why the seqnames column of a GRanges object may contain something other than numbers between 1 and 22, x and y.
+
+vragen ongeveer hier
+
+
+
