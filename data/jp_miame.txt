@@ -1,0 +1,9 @@
+item;details
+pi;Jean Paul Ten-Klooster
+data-analysis;Marc Teunis
+lab;Innovative Testing Lab
+email;int.fnt@hu.nl
+title;T-cell - Dendritic cells interactions
+platform;RNAseq
+web-url;www.innovativetesting.nl
+data-origin;Created from MS Excel file recieved on 6 feb. 2017

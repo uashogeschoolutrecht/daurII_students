@@ -1,0 +1,70 @@
+---
+title: "daur2_lesson56_heatmaps"
+author: "Marc A.T. Teunis, Alyanne de Haan"
+date: '`r Sys.Date()`'
+output: 
+  html_document: 
+    keep_md: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r libs, include=FALSE}
+
+library(tidyverse)
+library(SummarizedExperiment)
+library(airway)
+
+```
+
+## intro Heatmaps
+
+You are probably already familiar with heatmaps. Most of us have seen them around, as they provide a nice colourfull image of the thousands of datapoints in 'omics datasets.
+
+Heatmaps are graphical representations of data, and each data point (which can of course be an average of more raw data) is placed in amatrix with colour on a colour scale reflecting it's value. So for instance, often more blue-ish colours represent lower values while more red-ish colours represent higher values. This gives a summary of data that is otherwise difficult to summarise. 
+
+In Genomics, heatmaps can be used to visualise the level of expression of many genes across conditions (for instance samples from different patients, cell lines that have or have not been treated with a certain substance etc), all in the same figure. In this case, the colour and intensity of the boxes is used to represent changes  in gene expression (not absolute values). So for instance, upregulated genes get a more red-ish colour.
+
+They will look somewhat like this:
+
+```{r, out.width='50%', fig.align='center', fig.cap='...', echo=FALSE}
+knitr::include_graphics(
+  here::here(
+  'images',
+  'heatmap.png')
+)
+```
+(This heatmap was taken from Wikipedia, which generated the heatmap with data extracted from the StemBase database of gene expression data)
+
+When making heatmaps, you can choose how to arrange your data. Often,  each row represents a gene and each column represents a sample. Which gene to put on which row can be based on clustering methods which group genes  together based on the similarity of their gene expression pattern. So for example, all genes that show high expression in samples A,B and C but not D are clustered in the first rows. Then a group of genes that show high expression in samples A and B but not C and D. and so on. This would make it easier to spot general trends in the data.
+
+... In theory. Because in practice reading heatmaps takes some practice.
+
+You have been reading them for sure. Most heatmaps are not as complex as genomic heat maps. But then again, most data is not as complex as genomic data. You will be familiar with these, for instance:
+
+```{r, out.width='50%', fig.align='center', fig.cap='...', echo=FALSE}
+knitr::include_graphics(
+  here::here(
+  'images',
+  'covid19_ziekenhuis.png')
+)
+```
+
+You can easily spot regions that have higher values than others. You can also spot some things to keep in mind while reading and making heatmaps.
+Obviously, the spatial position of areas in this heat map will have some correlation with other variables that you may or may not have measured. In the covid-19 hospitalisation map, we do not know if the threshold to be hospitalised may have been different in Jipsingboermussel (county Westerwolde) than in Amsterdam because of the lower population density. Or perhaps the closer personal connection between the "huisarts" and the patients. Also, did they count the residence county, or the hospital county? Does Westerwolde even have a hospital? In this heatmap, areas that are next to each other will even correlate in their value. What do you think, do areas in genomic heatmaps do that as well? Do we always know? Clearly, no. So keep in mind that heatmaps are mainly usefull for giving rough summaries and spotting large trends.
+
+The patterns that are most easily recognised depend a lot on how (on which information) the heatmap designer (that will be you) decided to cluster the data. One additional factor to keep in mind, is that this also depends on the colour scale you use. Large contrasts in colour may over-represent changes in expression, while for instance unicolour heatmaps (changing only colour intensity) may underrepresent them. Also, our brain is really good in comparing contrasts, or colour values that are spatially near each other, but absolutely rubbish at comparing them at a distance. See an excellent example here: https://www.displayr.com/the-problem-with-heatmaps/
+
+Oke, great. So heatmaps are fiddly. Why do we even bother? Because large genomic datasets are quite hard to visualise and summarise with other methods. 
+
+## reading genomic heatmaps
+
+Therefore, we will practice a bit with how to read genomic heatmaps.
+
+

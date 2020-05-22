@@ -24,8 +24,6 @@ library(rentrez)
 
 ```
 
-
-
 ## Introduction: SummarizedExperiment class, rows and columns
 
 Based on the SummarizedExperiment class vignette.
@@ -91,6 +89,7 @@ __Example (1)__
 ```{r, eval=FALSE}
 BiocManager::install("airway")
 ```
+
 ```{r}
 library(airway)
 data(airway)
@@ -113,13 +112,18 @@ abstract
 We can check the phenotypic data:
 __Example (3)__
 ```{r}
-colData(airway) %>% as_tibble()
+samples <- c("GSM1275862", "GSM1275875")
+
+colData(airway) %>% as_tibble() %>%
+  dplyr::filter(SampleName %in% samples)
 ```
 
 And make subsets based on colData as well. For instance, suppose you only want to analyse data from the treated condition:
 __Example (4)__
 ```{r}
 airway[, airway$dex == "trt"]
+airway[, airway$SampleName %in% samples]
+
 ```
 
 Colnames() is similar to sampleNames from ExpressionSet and rownames() are like featureNames.
@@ -139,6 +143,7 @@ assayNames(airway)
 Let's print the first few rows:
 __Example (6)__
 ```{r}
+assay(airway) %>% as_tibble()
 head(assays(airway)$counts,10) %>% as_tibble()
 ```
 
