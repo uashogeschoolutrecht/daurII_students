@@ -1,6 +1,6 @@
 ---
 title: "Analyzing RNA-seq data with DESeq2"
-author: "Teunis, Marc A.T (Adapted after Michael I. Love, Simon Anders, and Wolfgang Huber)"
+author: "Marc A.T. Teunis (Adapted after Michael I. Love, Simon Anders, and Wolfgang Huber)"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 abstract: >
   A basic task in the analysis of count data from RNA-seq is the
