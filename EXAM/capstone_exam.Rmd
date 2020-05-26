@@ -10,6 +10,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+<include your name and student id in the file name>
 
 # Directions and tips
 **PLEASE PROVIDE THE FOLLOWING IN THE YAML HEADER ABOVE BEFORE SUBMITTING THIS EXAM**

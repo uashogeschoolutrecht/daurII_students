@@ -123,7 +123,6 @@ library(pheatmap)
 pheatmap(expressiondata)
 ```
 
-
 heatmap1-1.png
 
 On top, you see the function’s clustering of the samples. You can see the difference in hairy genes expression pattern between samples 1 and 4 versus samples 2 and 3.
@@ -146,7 +145,6 @@ pheatmap(expressiondata, scale="row")
 # heatmapscaled-1.png
 
 ```
-
 
 Now the rows are easier to compare, and we see that the expression of hairy1 and earsize1 seems to be correlated, as well as the hairy2 and earsize2. Indeed, the more hairy pokemon in our selection tend to have smaller ears and the less hairy pokemon tend to have bigger ears. Also, the expression of the wingsize gene seems to be correlated to expression of hairy1 and earsize1 genes.
 

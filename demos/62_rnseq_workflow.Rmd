@@ -163,6 +163,11 @@ gds_zebrafish <- getGEO("GSE76073")
 gds_zebrafish # a list with 1 element
 ## extract the Expression set for later use
 eset <- gds_zebrafish[[1]]
+
+names(gds_zebrafish)
+
+exprs(eset)
+
 ```
 
 ### Getting the raw counts 
@@ -174,6 +179,7 @@ getGEOSuppFiles("GSE76073")
 
 ### Load the raw counts into R
 ```{r}
+
 cnts <- read.delim(
   here::here(
     "GSE76073",
@@ -181,7 +187,7 @@ cnts <- read.delim(
   ), stringsAsFactors = FALSE
 ) 
 
-head(cnts)
+head(cnts) %>% as_tibble()
 
 ```
 
@@ -259,7 +265,7 @@ col_data %>%
 ) -> col_data_new
 
 rownames(col_data_new)
-
+col_data_new %>% as_tibble()
 ```
 
 ### Match colnames of `cnts` with rownames of `col_data_new`
@@ -335,6 +341,7 @@ cnts_new <- cnts[, ind_col]
 To see if we are ready to create our `SummarizedExperiment` we check if the rownames of col_data_new match the colnames of `cnts_new`
 ```{r}
 colnames(cnts_new) == rownames(col_data_new)
+
 ```
 
 **YES!! WE ARE DONE** We are lucky that we do not have to change the column order of `cnts_new`
@@ -380,11 +387,18 @@ metadata <- list(
 
 ### Constructing the `SummarizedExperiment` object
 ```{r}
+# proteomic
+# metabolomics
+# microbiome analysis
+# genomic sequencing
+# transcriptomics
+# kinomics
+
 sumexp <- SummarizedExperiment(
-  assays = as.matrix(cnts_new),
-  colData = col_data_new,
-  rowData = feature_data,
-  metadata = metadata
+  assays = as.matrix(cnts_new), # supplementary data downloaded
+  colData = col_data_new, # part of the expression set via GEOquery
+  rowData = feature_data, # rownames van de counts matrix, addiotional column
+  metadata = metadata # part of the colData
 ) 
 
 sumexp
@@ -392,6 +406,12 @@ sumexp
 ## access the counts
 head(assay(sumexp))
 colData(sumexp)
+
+readr::write_rds(sumexp, path = here::here("data", "sumExp_lesson6-2.rds")) 
+readr::read_rds(path = here::here("data", "sumExp_lesson6-2.rds"))
+
+assay(sumexp) %>% as_tibble()
+
 ```
 
 ## Differential expression analysis
@@ -402,25 +422,36 @@ We use the DESeq2 package
 `design = ~ genotype_ch1 + zeitgeber_time_ch1`
 
 ```{r}
+## Check the levels of the exeperimental factors before moving on
+## factor relevellen: see chapter 'forcats / Forcats' uit R4DS!!
+col_data_new$genotype_ch1 %>% as.factor() %>% levels
+col_data_new$zeitgeber_time_ch1 %>% as.factor() %>% levels
+
 ddsSE <- DESeq2::DESeqDataSet(sumexp, design = ~ genotype_ch1 + zeitgeber_time_ch1)
+
 ```
 
 ### We can filter for low expression before analyzing further
 Only genes with total row count sum of more than 10 are kept in the data.
 ```{r}
-keep <- rowSums(counts(ddsSE)) >= 10
+keep <- rowSums(counts(ddsSE)) >= 24 ## filter for low abundance
 ddsSE <- ddsSE[keep,]
+
+ddsSE
 ```
 
 ### Running the analysis with default settings
 ```{r}
-ddsDE <- DESeq(ddsSE)
+ddsDE <- DESeq2::DESeq(ddsSE) ## normalisation and scaling is included
 ```
 
 ### Getting the result table
 The results table is the table containing the end results of the analysis. This is what you should write to disk for future reference, along with the code that generated the table. Store them close together. Preferably you build an R-package around your analysis, containing all the components neccessary to reproduce the exact result. In the module 'Workflow' that will be part of the bioinformatics courses from 2021 onwards, we will demonstrate how to build such an R package.
 ```{r}
-res <- results(ddsDE)
+res <- results(ddsDE) 
+
+res_df <- res %>% as_tibble()
+
 ## top genes
 res[order(res$padj), ] %>% head
 
@@ -560,14 +591,14 @@ attributes[ind_attrib,]
 
 annotations <- 
   getBM(
-    attributes=c('external_gene_name', 'ensembl_gene_id'),
+    attributes=c('zfin_id_symbol', 'ensembl_gene_id'),
     filters = 'ensembl_gene_id', 
     values = rownames(top30), 
     mart = mart)
 
 ```
 
-**Conclusion** On the basis of the top30 genes and theri respective ensembl_ids, we find 27 annotated genes. Let's plot a new heatmap showing those with the 27 new names 
+**Conclusion** On the basis of the top30 genes and their respective ensembl_ids, we find 27 annotated genes. Let's plot a new heatmap showing those with the 27 new names 
 
 ```{r}
 top30_df <- top30 %>%
@@ -577,7 +608,7 @@ top30_df <- top30 %>%
 annot_27 <- left_join(annotations, top30_df)
 
 top_27_annot <- as.matrix(annot_27[, -c(1:2)])
-rownames(top_27_annot) <- annot_27$external_gene_name
+rownames(top_27_annot) <- annot_27$zfin_id_symbol
 
 ```
 
@@ -592,4 +623,6 @@ heatmap <- pheatmap(top_27_annot,
 heatmap
 ```
 
+## Next steps:
 
+ - pathway analysis
